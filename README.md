@@ -26,10 +26,11 @@ The central aim is to investigate and model the distribution of NEAs using a com
 ├── figures/               # Output plots and visualizations
 ├── src/                   # Supplementary Python scripts and utilities
 ├── docs/                  # Thesis notes and reference material
-├── integration.ipynb      # Main analysis notebook
-├── multimin_NEAs.ipynb    # Main analysis notebook
-├── visualizations.ipynb   # Main analysis notebook
-└── magnitude.ipynb        # Main analysis notebook
+├── integration.ipynb      # Fireball back-in-time trajectory integration
+├── multimin_NEAs.ipynb    # Fitting NEA distribution (JPL data)
+├── multimin_NEOPOP.ipynb  # Fitting NEOPOP synthetic population
+├── visualizations.ipynb   # Orbital and statistical plots
+└── magnitude.ipynb        # Observational bias and magnitude analysis
 ```
 
 ---
