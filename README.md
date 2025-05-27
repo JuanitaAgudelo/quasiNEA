@@ -20,35 +20,17 @@ The central aim is to investigate and model the distribution of NEAs using a com
 ---
 
 ## 📁 Repository Structure
-
-├── data/ # Raw and processed datasets (NEAs, fireballs) 
-
-
-├── figures/ # Output plots and visualizations
-
-
-├── src/ # Supplementary Python scripts and utilities
-
-
-├── docs/ # Thesis notes and reference material
-
-
-└── nea_distribution_analysis.ipynb # Main analysis notebook
-
-
-└── integration.ipynb # Main analysis notebook
-
-
-└── multimin_NEAs.ipynb # Main analysis notebook
-
-
-└── multimin_NEOPOP.ipynb # Main analysis notebook
-
-
-└── visualizations.ipynb # Main analysis notebook
-
-
-└── magnitude.ipynb # Main analysis notebook
+```
+.
+├── data/                  # Raw and processed datasets (NEAs, fireballs) 
+├── figures/               # Output plots and visualizations
+├── src/                   # Supplementary Python scripts and utilities
+├── docs/                  # Thesis notes and reference material
+├── integration.ipynb      # Main analysis notebook
+├── multimin_NEAs.ipynb    # Main analysis notebook
+├── visualizations.ipynb   # Main analysis notebook
+└── magnitude.ipynb        # Main analysis notebook
+```
 
 ---
 
