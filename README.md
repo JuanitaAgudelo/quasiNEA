@@ -21,7 +21,7 @@ The central aim is to investigate and model the distribution of NEAs using a com
 
 ## 📁 Repository Structure
 
-├── data/ # Raw and processed datasets (NEAs, fireballs)
+├── data/ # Raw and processed datasets (NEAs, fireballs) \\
 ├── figures/ # Output plots and visualizations
 ├── src/ # Supplementary Python scripts and utilities
 ├── docs/ # Thesis notes and reference material
