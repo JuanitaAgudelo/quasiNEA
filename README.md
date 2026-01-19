@@ -2,7 +2,7 @@
 ## Quasi-Analytic NEA Distribution
 
 <p align="center">
-  <img src="logo_quasiNEA.png" alt="Quasi-analytic NEA distribution cover" width="800">
+  <img src="logo_QuasiNEA.png" alt="Quasi-analytic NEA distribution cover" width="800">
 </p>
 
 This repository contains the code and resources developed for my thesis focused on the  
