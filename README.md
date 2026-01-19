@@ -1,11 +1,21 @@
 # quasiNEA ☄️
-## Quasi Analytic NEA Distribution
+## Quasi-Analytic NEA Distribution
 
-![orbitas_asteroides_zoom](https://github.com/user-attachments/assets/cd3f7e69-742f-4516-8395-6e5fa881b60c)
+<p align="center">
+  <img src="logo_quasiNEA.png" alt="Quasi-analytic NEA distribution cover" width="800">
+</p>
 
-This repository contains the code and resources developed for my thesis focused on the **analytical and quasi-analytical study of the distribution of Near-Earth Asteroids (NEAs)** within the Solar System.
+This repository contains the code and resources developed for my thesis focused on the  
+**analytical and quasi-analytical study of the distribution of Near-Earth Asteroids (NEAs)**.
 
-The central aim is to investigate and model the distribution of NEAs using a combination of theoretical methods, empirical datasets, and computational optimization techniques. This work leverages data from public space databases and incorporates statistical modeling to better understand the orbital behavior and potential observational biases in NEA data.
+The central aim is to investigate and model the distribution of NEAs using a combination of:
+
+- Analytical and quasi-analytical methods  
+- Empirical datasets from public space databases  
+- Numerical simulations and optimization techniques  
+
+The project integrates theoretical modeling with observational constraints to better understand  
+the orbital structure, spatial distributions, and potential observational biases affecting NEA populations.
 
 ---
 
