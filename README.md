@@ -65,7 +65,7 @@ quasiNEA/
 │   └── Figures and visual resources for documentation
 │
 └── README.md
-
+```
 
 ## 📓 Main Notebooks: 
 
