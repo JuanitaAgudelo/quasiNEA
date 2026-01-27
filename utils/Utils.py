@@ -5,6 +5,188 @@ import spiceypy as spy
 from typing import Dict, Set
 import multimin as mm
 
+def Geo2Eclip(lon, lat, alt, date=None, et=None, frame='ITRF93'):
+    """
+    Converts geodetic coordinates (latitude, longitude, altitude) of an impact 
+    event on Earth to ecliptic J2000 coordinates.
+
+    Parameters:
+    ----------
+    lon : float
+        Geodetic longitude of the impact site [degrees].
+    lat : float
+        Geodetic latitude of the impact site [degrees].
+    alt : float
+        Altitude of the impact site above Earth's reference spheroid [km].
+    date : str
+        UTC date and time of the impact event in format 'YYYY-MM-DD HH:MM:SS'.
+
+    Returns:
+    -------
+    r_earth_ecl : ndarray
+        Cartesian coordinates [km] of the impact site in the Ecliptic J2000 frame.
+
+    Notes:
+    ------
+    1. The function first converts geodetic coordinates to Earth-centered 
+       Cartesian coordinates in the ITRF93 frame.
+    2. Then, it applies a transformation matrix to convert from ITRF93 
+       (Earth-fixed) to ECLIPJ2000 (inertial, ecliptic-based) frame.
+    3. This transformation is necessary for orbital calculations, ensuring 
+       the position is in an inertial reference frame.
+    """
+    deg = np.pi/180
+
+    lon = lon*deg
+    lat = lat*deg
+
+    n, props = spy.bodvrd('399','RADII',3)
+    RE_spice = props[0]  #Equatorial radius of the reference spheroid.
+    RP_spice = props[2]  #Polar radius of the reference spheroid.
+    f_spice = (RE_spice-RP_spice)/RE_spice # Flattening coefficient.
+    r_earth_fixed = spy.georec(lon, lat, alt, RE_spice, f_spice)
+    #print("Equatorial and Polar Radios: ", RE_spice, RP_spice)
+
+    if date: 
+        et = spy.utc2et(date)  #Convert from UTC to ephemerides time
+        #print("ET", et)
+    
+        r_earth_fixed = spy.georec(lon, lat, alt, RE_spice, f_spice)  #Convert geodetic coordinates to rectangular coordinates in the ITRF93 frame (rotante)
+        #print("GeoRec", r_earth_fixed)
+        M_ecl = spy.pxform(frame, 'ECLIPJ2000', et) 
+        r_earth_ecl = spy.mxv(M_ecl, r_earth_fixed)  #from ITRF93 (rotante) frame to inertial frame ECLIPJ2000
+    else: 
+        print('et: ephemeris time is not provided')    
+    return r_earth_ecl
+
+
+def Geo2Rec(lon, lat, alt):
+    """
+    lon: (float) [°]
+    lat: (float) [°]
+    alt: (float) km
+    date: (str) '2000-08-16 00:00:00'
+    """
+    deg = np.pi/180
+
+    lon = lon*deg
+    lat = lat*deg
+
+    n, props = spy.bodvrd('399','RADII',3)
+    RE_spice = props[0]
+    RP_spice = props[2]
+    #print("Equatorial and Polar Radios: ", RE_spice, RP_spice)
+    f_spice = (RE_spice-RP_spice)/RE_spice
+    #print(RE_spice, RP_spice)
+
+    r_earth_fixed = spy.georec(lon, lat, alt, RE_spice, f_spice)
+
+    return r_earth_fixed
+
+def Geo2Eclip2(lon, lat, alt, date):
+    """
+    lon: (float) [°]
+    lat: (float) [°]
+    alt: (float) km
+    date: (str) '2000-08-16 00:00:00'
+    """
+
+    et = spy.utc2et(date)
+    r_earth_fixed = Geo2Rec(lon, lat, alt)
+    mx = spy.pxform('IAU_EARTH', 'ECLIPJ2000', et)
+    r_earth_ecl = spy.mxv(mx, r_earth_fixed)
+
+    return r_earth_ecl
+
+def z_axis_rotation(x: float) -> np.ndarray:
+    return np.array([[np.cos(x), -np.sin(x), 0],[np.sin(x), np.cos(x), 0],[0,0,1]])
+
+def mag(x) -> float:
+    """
+    Compute the magnitude of a vector.
+    
+    Parameters:
+    -----------
+    x : array-like
+        Input vector (can be list, tuple, numpy array, etc.)
+        
+    Returns:
+    --------
+    float
+        Magnitude of the vector
+    """
+    return (x@x)**0.5
+
+def get_velocity_ecliptic(vx: float, vy: float, vz: float, lon: float, lat: float, alt: float, 
+                         date: str | None = None, et: float | None = None) -> np.ndarray:
+    """
+    Convert velocity vector from Earth-fixed to ecliptic J2000 coordinates.
+    
+    This function takes a velocity vector in Earth-fixed coordinates and converts it
+    to ecliptic J2000 coordinates, accounting for Earth's rotation.
+    
+    Parameters:
+    -----------
+    vx, vy, vz : float
+        Velocity components in Earth-fixed coordinates [km/s]
+    lon, lat : float
+        Geodetic longitude and latitude of the observation point [degrees]
+    alt : float
+        Altitude above Earth's reference spheroid [km]
+    date : str, optional
+        UTC date and time in format 'YYYY-MM-DD HH:MM:SS'
+        Must be provided if et is not provided
+    et : float, optional
+        Ephemeris time (ET) in seconds past J2000
+        Must be provided if date is not provided
+        
+    Returns:
+    --------
+    v_eclip : np.ndarray
+        Velocity vector in ecliptic J2000 coordinates [km/s]
+        
+    Raises:
+    -------
+    ValueError
+        If neither date nor et is provided, or if both are provided
+        
+    Notes:
+    ------
+    The function accounts for Earth's rotation by adding the cross product
+    of Earth's angular velocity and the position vector to the input velocity.
+    """
+    # Input validation
+    if date is not None and et is not None:
+        raise ValueError("Provide either 'date' or 'et', not both")
+    if date is None and et is None:
+        raise ValueError("Either 'date' or 'et' must be provided")
+    
+    # Convert velocity to numpy array
+    v = np.array([vx, vy, vz])
+    
+    # Get position vector in Earth-fixed coordinates
+    r = Geo2Rec(lon, lat, alt)
+    
+    # Earth's rotation parameters
+    t_sidereal = 86164.09053083288  # Sidereal day in seconds
+    w_earth = 2 * np.pi / t_sidereal  # Earth's angular velocity [rad/s]
+    omega = np.array([0, 0, w_earth])
+    
+    # Add Earth's rotation contribution to velocity
+    v_E = v + spy.vcrss(omega, r)  # Velocity in Earth-fixed frame [km/s]
+    
+    # Convert ephemeris time if date is provided
+    if date is not None:
+        et = spy.utc2et(date)
+    
+    # Transform from Earth-fixed to ecliptic J2000 coordinates
+    # At this point, et is guaranteed to be a float due to input validation
+    mx = spy.pxform('ITRF93', 'ECLIPJ2000', et)  # type: ignore
+    v_eclip = spy.mxv(mx, v_E)
+    
+    return v_eclip
+
+
 def Kepler(E, M, e):
     return E - e * np.sin(E) - M
 
@@ -155,6 +337,18 @@ def trasformation_X_to_E(x: float, y: float, z: float, vx: float, vy: float, vz:
     a = q/(1-e)
 
     return q, e, i, Omega, w, M, a
+
+def trasformation_E_to_X(q: float, e: float, i: float, Omega: float, w: float, M: float, mu: float) -> tuple[float, float, float, float, float, float]:
+
+    state_vec = spy.conics([q, e, i, Omega, w, M]+[0, mu], 0)
+    x = state_vec[0]
+    y = state_vec[1]
+    z = state_vec[2]
+    vx = state_vec[3]
+    vy = state_vec[4]
+    vz = state_vec[5]
+
+    return x, y, z, vx, vy, vz
 
 def compute_jacobian_XoE(a: float, e: float, i: float, Omega: float, w: float, M: float, mu: float) -> np.array:
     E = newton(Kepler, M, args=(M, e))
@@ -383,57 +577,140 @@ def P_X_CMND(x: np.ndarray, y: np.ndarray, z: np.ndarray, vx: np.ndarray, vy: np
                     
     return P.reshape(shape)
 
-def r_fixed_surface_integral_P_X_CMND(center, widths, position, max_elements: list, n_points=8, mu=1, F=mm.FitCMND):
+def hypercube_surface_integral_P_X_CMND(center, widths, max_elements: list, n_points=8, mu=1, F=mm.FitCMND):
     """
-    Calculate the integral of P_X_CMND over a position box (x, y, z) with fixed velocities.
-    Integrates only over positions in a box centered at (cx, cy, cz) with widths (dx, dy, dz),
-    while keeping velocities constant (vx = cte, vy = cte, vz = cte).
+    Calculate the surface integral of P_xyvxvy in a hypercube centered at (x, y, vx, vy)
+    with dimensions (dx, dy, dvx, dvy) using Gauss-Legendre quadrature.
 
     Parameters:
-        center: tuple/list/array of (cx, cy, cz) position center
-        widths: tuple/list/array of (dx, dy, dz) position side lengths
-        velocities: tuple/list/array of (vx, vy, vz) constant velocities
-        max_elements: tuple/list/array of (q_max, e_max, i_max) max elements
+        center: tuple/list/array of (x, y, vx, vy) center
+        widths: tuple/list/array of (dx, dy, dvx, dvy) side lengths
+        max_elemetns: tuple/list/array of (a_max, e_max, i_max) max elements
         n_points: number of quadrature points per dimension
-        mu: gravitational parameter
-        F: FitCMND object
 
     Returns:
         Integral (float)
     """
     from numpy.polynomial.legendre import leggauss
 
-    cvx, cvy, cvz = center
-    dvx, dvy, dvz = widths
-    x, y, z = position
+    x0, y0, z0, vx0, vy0, vz0 = center
+    dx, dy, dz, dvx, dvy, dvz = widths
     q_max, e_max, i_max = max_elements
 
     # Get Gauss-Legendre points and weights for [-1, 1]
     pts, wts = leggauss(n_points)
 
-    # Map points from [-1, 1] to [center-width/2, center+width/2] for position dimensions only
-    vx_pts = cvx + 0.5*dvx*pts
-    vy_pts = cvy + 0.5*dvy*pts
-    vz_pts = cvz + 0.5*dvz*pts
+    # Map points from [-1, 1] to [center-width/2, center+width/2] for each dimension
+    x_pts = x0 + 0.5*dx*pts
+    y_pts = y0 + 0.5*dy*pts
+    z_pts = z0 + 0.5*dz*pts
+    vx_pts = vx0 + 0.5*dvx*pts
+    vy_pts = vy0 + 0.5*dvy*pts
+    vz_pts = vz0 + 0.5*dvz*pts
 
-    # Create meshgrid only for position quadrature points
-    VX, VY, VZ = np.meshgrid(vx_pts, vy_pts, vz_pts, indexing='ij')
-    WX, WY, WZ = np.meshgrid(wts, wts, wts, indexing='ij')
+    # Create meshgrid of all quadrature points
+    X, Y, Z, VX, VY, VZ = np.meshgrid(x_pts, y_pts, z_pts, vx_pts, vy_pts, vz_pts, indexing='ij')
+    WX, WY, WZ, WVX, WVY, WVZ = np.meshgrid(wts, wts, wts, wts, wts, wts, indexing='ij')
 
     # Flatten for vectorized evaluation
+    Xf = X.ravel()
+    Yf = Y.ravel()
+    Zf = Z.ravel()
     VXf = VX.ravel()
     VYf = VY.ravel()
     VZf = VZ.ravel()
-    WF = (WX * WY * WZ).ravel()
-    
-    # Create constant velocity arrays (same size as position arrays)
-    Xf = np.full_like(VXf, x)
-    Yf = np.full_like(VYf, y)
-    Zf = np.full_like(VZf, z)
-    
-    # Evaluate P at all points with constant velocities
+    WF = (WX * WY * WZ * WVX * WVY * WVZ).ravel()
+    # Evaluate P at all points
     Pf = P_X_CMND(Xf, Yf, Zf, VXf, VYf, VZf, q_max, e_max, i_max, mu, F=F)
 
-    # Integral is sum(P * weight) * volume factor (only position dimensions)
-    integral = np.sum(Pf * WF) * (0.5*dvx) * (0.5*dvy) * (0.5*dvz)
+    # Integral is sum(P * weight) * volume factor
+    integral = np.sum(Pf * WF) * (0.5*dx) * (0.5*dy) * (0.5*dz) * (0.5*dvx) * (0.5*dvy) * (0.5*dvz)
+    #return integral, y_points
+    return integral
+
+def box_surface_integral_P_X_CMND(center, widths, fixed_values, max_elements: list, integrate_over='velocity', n_points=8, mu=1, F=mm.FitCMND):
+    """
+    Generalized function to calculate the integral of P_X_CMND over a box in either position or velocity space,
+    while keeping the other fixed.
+    
+    Parameters:
+        center: tuple/list/array of (c1, c2, c3) center of the integration box
+        widths: tuple/list/array of (d1, d2, d3) side lengths of the integration box
+        fixed_values: tuple/list/array of (f1, f2, f3) fixed values for the non-integrated dimensions
+        max_elements: tuple/list/array of (q_max, e_max, i_max) max elements
+        integrate_over: 'position' or 'velocity' - specifies which dimensions to integrate over
+        n_points: number of quadrature points per dimension
+        mu: gravitational parameter
+        F: FitCMND object
+    
+    Returns:
+        Integral (float)
+    
+    Examples:
+        # Integrate over velocity box with fixed position (equivalent to v_box_surface_integral_P_X_CMND)
+        integral = box_surface_integral_P_X_CMND(
+            center=(vx_c, vy_c, vz_c), 
+            widths=(dvx, dvy, dvz),
+            fixed_values=(x, y, z),  # fixed position
+            max_elements=[q_max, e_max, i_max],
+            integrate_over='velocity'
+        )
+        
+        # Integrate over position box with fixed velocity (equivalent to r_box_surface_integral_P_X_CMND)
+        integral = box_surface_integral_P_X_CMND(
+            center=(x_c, y_c, z_c), 
+            widths=(dx, dy, dz),
+            fixed_values=(vx, vy, vz),  # fixed velocity
+            max_elements=[q_max, e_max, i_max],
+            integrate_over='position'
+        )
+    """
+    from numpy.polynomial.legendre import leggauss
+    
+    if integrate_over not in ['position', 'velocity']:
+        raise ValueError("integrate_over must be 'position' or 'velocity'")
+    
+    c1, c2, c3 = center
+    d1, d2, d3 = widths
+    f1, f2, f3 = fixed_values
+    q_max, e_max, i_max = max_elements
+    
+    # Get Gauss-Legendre points and weights for [-1, 1]
+    pts, wts = leggauss(n_points)
+    
+    # Map points from [-1, 1] to [center-width/2, center+width/2] for integration dimensions
+    dim1_pts = c1 + 0.5*d1*pts
+    dim2_pts = c2 + 0.5*d2*pts
+    dim3_pts = c3 + 0.5*d3*pts
+    
+    # Create meshgrid for integration dimensions
+    DIM1, DIM2, DIM3 = np.meshgrid(dim1_pts, dim2_pts, dim3_pts, indexing='ij')
+    W1, W2, W3 = np.meshgrid(wts, wts, wts, indexing='ij')
+    
+    # Flatten for vectorized evaluation
+    DIM1f = DIM1.ravel()
+    DIM2f = DIM2.ravel()
+    DIM3f = DIM3.ravel()
+    WF = (W1 * W2 * W3).ravel()
+    
+    # Create constant arrays for fixed dimensions (same size as integration arrays)
+    F1f = np.full_like(DIM1f, f1)
+    F2f = np.full_like(DIM2f, f2)
+    F3f = np.full_like(DIM3f, f3)
+    
+    # Assign to position and velocity based on integrate_over parameter
+    if integrate_over == 'velocity':
+        # Integrating over velocities, positions are fixed
+        Xf, Yf, Zf = F1f, F2f, F3f  # fixed positions
+        VXf, VYf, VZf = DIM1f, DIM2f, DIM3f  # integrated velocities
+    else:  # integrate_over == 'position'
+        # Integrating over positions, velocities are fixed
+        Xf, Yf, Zf = DIM1f, DIM2f, DIM3f  # integrated positions
+        VXf, VYf, VZf = F1f, F2f, F3f  # fixed velocities
+    
+    # Evaluate P at all points
+    Pf = P_X_CMND(Xf, Yf, Zf, VXf, VYf, VZf, q_max, e_max, i_max, mu, F=F)
+    
+    # Integral is sum(P * weight) * volume factor
+    integral = np.sum(Pf * WF) * (0.5*d1) * (0.5*d2) * (0.5*d3)
     return integral
