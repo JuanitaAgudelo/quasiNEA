@@ -37,10 +37,13 @@ quasiNEA/
 │   ├── marginal_distributions.ipynb
 │   │   └── Numerical integration of marginal distributions derived from P(X)
 │   │
-│   └── MonteCarlo_experiment.ipynb
+│   └── MonteCarloExp.ipynb
 │       └── Monte Carlo experiments for validating the quasi-analytic formulation
 │
 ├── datos/
+|   └──kernels/
+│   │   └── Required kernels for spiceypy routines
+│   │
 │   └── Observational datasets:
 │       - CNEOS fireball catalog
 │       - JPL Small-Body Database (SBDB) queries
@@ -50,8 +53,12 @@ quasiNEA/
 │   ├── products/
 │   │   └── Fitted cumulative magnitude number distributions (CMND)
 │   │
-│   └── multimin_NEAs/
+│   └── multimin_NEAs.ipynb
 │       └── CMND fitting procedure and related diagnostic plots
+│
+├── earth_impactors/
+│   ├── orbit_reconstruction.ipynb
+│       └── Background time integration to reconstruct heliocentric orbits of impactors 
 │
 ├── utils/
 │   ├── Core utilities, classes, and dataclasses
@@ -61,21 +68,8 @@ quasiNEA/
 ├── multimin.py
 │   └── Standalone CMND optimization package
 │
-├── assets/
-│   └── Figures and visual resources for documentation
-│
 └── README.md
 ```
-
-## 📓 Main Notebooks: 
-
-- 🔁 **Back-in-time integration of fireball impact data** to compare impact trajectories with modeled distributions.
-- 📊 **Fitting the NEA distribution** from JPL Small-Body Database using the `multimin` optimization package.
-- 🌌 **Fitting the NEOPOP model distribution** (Near-Earth Object Population Observation Program) for comparative analysis.
-- 🔍 **Magnitude analysis** to identify and quantify observational biases in the distribution of orbital elements.
-- 📈 **Visualization of modeled vs observed distributions** to assess model fit and potential biases.
-
----
 
 ## 🧮 Methodology overview
 
