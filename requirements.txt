@@ -1,0 +1,21 @@
+# Dependencies for quasiNEA repository
+# Python 3.11+
+
+# Core scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Data manipulation
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+plotly>=5.14.0
+
+# Astronomical calculations
+spiceypy>=5.0.0
+astropy>=5.3.0
+rebound>=3.22.0
+
+# Progress bars
+tqdm>=4.65.0
